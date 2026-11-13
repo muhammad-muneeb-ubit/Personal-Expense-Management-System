@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.API_URL || 'https://personal-expense-management-system-mote.onrender.com/api';
+const API_URL = import.meta.env.API_URL || 'https://personal-expense-management-system-mote.onrender.com/api'|| 'http://localhost:5000/api';
+// const API_URL =  'http://localhost:5000/api';
 let accessToken = null;
 let refreshing = null;
 export const setAccessToken = token => { accessToken = token || null; };

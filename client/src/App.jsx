@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck, Mail, LockKeyhole, UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck,  UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, } from 'recharts';
 import { apiRequest, refreshSession, setAccessToken } from './lib/api';
 import MoneyLentPage from './pages/MoneyLentPage';
@@ -108,50 +108,46 @@ function Modal({ title, subtitle, onClose, children }) {
   );
 }
 
+
 function AuthScreen({ onAuthenticated, notify }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState('login');
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    dateOfBirth: '',
+    password: '',
+  });
   const [error, setError] = useState('');
 
-  const update = (e) => setForm((old) => ({ ...old, [e.target.name]: e.target.value }));
+  const update = (e) =>
+    setForm((old) => ({ ...old, [e.target.name]: e.target.value }));
 
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
     setError('');
+
     try {
       const endpoint = mode === 'register' ? '/auth/register' : '/auth/login';
       const data = await apiRequest(endpoint, {
         method: 'POST',
         auth: false,
-        body: JSON.stringify(form),
+        body: JSON.stringify(  mode === 'register'
+    ? form
+    : {
+        email: form.email,
+        password: form.password,
+      }),
       });
+
       setAccessToken(data.accessToken);
       onAuthenticated(data.user);
       if (data.message) notify(data.message);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function forgot() {
-    if (!form.email) return setError('Enter your email address first.');
-    setBusy(true);
-    setError('');
-    try {
-      const data = await apiRequest('/auth/forgot-password', {
-        method: 'POST',
-        auth: false,
-        body: JSON.stringify({ email: form.email }),
-      });
-      notify(data.message);
-      setMode('login');
-    } catch (e) {
-      setError(e.message);
     } finally {
       setBusy(false);
     }
@@ -166,6 +162,7 @@ function AuthScreen({ onAuthenticated, notify }) {
           </div>
           <span>Pocketwise</span>
         </div>
+
         <div className="auth-pitch">
           <div className="auth-eyebrow">YOUR MONEY, MADE CLEAR</div>
           <h1>
@@ -173,19 +170,15 @@ function AuthScreen({ onAuthenticated, notify }) {
             <br />
             <em>count.</em>
           </h1>
-          <p>A calmer way to track spending, plan your budget, and build better money habits.</p>
+          <p>
+            A calmer way to track spending, plan your budget, and build better money habits.
+          </p>
           <div className="auth-visual">
             <div className="visual-card">
               <span>Monthly spending</span>
               <strong>PKR 42,850</strong>
               <div className="visual-bars">
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
-                <i />
+                <i /><i /><i /><i /><i /><i /><i />
               </div>
               <small>
                 <TrendingUp size={13} /> Stay on top of your goals
@@ -198,7 +191,10 @@ function AuthScreen({ onAuthenticated, notify }) {
             </div>
           </div>
         </div>
-        <div className="auth-aside-foot">Private by design · Built for your financial wellbeing</div>
+
+        <div className="auth-aside-foot">
+          Private by design · Built for your financial wellbeing
+        </div>
       </div>
 
       <div className="auth-main">
@@ -208,6 +204,7 @@ function AuthScreen({ onAuthenticated, notify }) {
           </div>
           <b>Pocketwise</b>
         </div>
+
         <div className="auth-card">
           <div className="auth-card-heading">
             <div className="eyebrow">WELCOME TO POCKETWISE</div>
@@ -221,19 +218,34 @@ function AuthScreen({ onAuthenticated, notify }) {
 
           <form onSubmit={submit} className="stack-form">
             {mode === 'register' && (
-              <Field label="Full name">
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={update}
-                  placeholder="Your name"
-                  autoComplete="name"
-                  required
-                  minLength="2"
-                  maxLength="70"
-                />
-              </Field>
+              <>
+                <Field label="Full name">
+                  <input
+                    name="name"
+                    value={form.name}
+                    onChange={update}
+                    placeholder="Your name"
+                    autoComplete="name"
+                    required
+                    minLength="2"
+                    maxLength="70"
+                  />
+                </Field>
+
+                <Field label="Date of birth">
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={update}
+                    max={today()}
+                    required
+                  />
+                  <small>Used to verify your identity if you forget your password.</small>
+                </Field>
+              </>
             )}
+
             <Field label="Email address">
               <input
                 name="email"
@@ -245,6 +257,7 @@ function AuthScreen({ onAuthenticated, notify }) {
                 required
               />
             </Field>
+
             <Field label="Password">
               <div className="password-wrap">
                 <input
@@ -252,17 +265,29 @@ function AuthScreen({ onAuthenticated, notify }) {
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={update}
-                  placeholder={mode === 'register' ? 'At least 10 characters' : 'Enter your password'}
-                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                  placeholder={
+                    mode === 'register'
+                      ? 'At least 10 characters'
+                      : 'Enter your password'
+                  }
+                  autoComplete={
+                    mode === 'register' ? 'new-password' : 'current-password'
+                  }
                   required
                   minLength={mode === 'register' ? 10 : 1}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
+
               {mode === 'register' && (
-                <small>Use at least 10 characters with uppercase, lowercase and a number.</small>
+                <small>
+                  Use at least 10 characters with uppercase, lowercase and a number.
+                </small>
               )}
             </Field>
 
@@ -274,20 +299,31 @@ function AuthScreen({ onAuthenticated, notify }) {
             )}
 
             <Button disabled={busy} type="submit">
-              {busy ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}{' '}
+              {busy
+                ? 'Please wait…'
+                : mode === 'register'
+                  ? 'Create account'
+                  : 'Sign in'}{' '}
               <ArrowUpRight size={16} />
             </Button>
           </form>
 
           {mode === 'login' && (
-            <button className="text-button forgot-button" onClick={forgot} disabled={busy}>
+            <button
+              type="button"
+              className="text-button forgot-button"
+              onClick={() => navigate('/forgot-password')}
+            >
               Forgot password?
             </button>
           )}
 
           <div className="auth-switch">
-            {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
+            {mode === 'register'
+              ? 'Already have an account?'
+              : "Don't have an account?"}{' '}
             <button
+              type="button"
               onClick={() => {
                 setMode(mode === 'register' ? 'login' : 'register');
                 setError('');
@@ -309,6 +345,7 @@ function AuthScreen({ onAuthenticated, notify }) {
     </div>
   );
 }
+
 
 function Sidebar({ open, close, user, onLogout }) {
   return (
@@ -1364,17 +1401,14 @@ function ReportsPage({ report, currency, year, setYear }) {
   );
 }
 
-function SettingsPage({
-  user,
-  onProfileSave,
-  onPasswordChange,
-  onResendVerification,
-  notify,
-}) {
+function SettingsPage({ user, onProfileSave, onPasswordChange, notify }) {
   const [name, setName] = useState(user.name);
   const [currency, setCurrency] = useState(user.currency || 'PKR');
   const [busy, setBusy] = useState(false);
-  const [password, setPassword] = useState({ currentPassword: '', newPassword: '' });
+  const [password, setPassword] = useState({
+    currentPassword: '',
+    newPassword: '',
+  });
   const [passwordBusy, setPasswordBusy] = useState(false);
 
   async function save(e) {
@@ -1419,6 +1453,7 @@ function SettingsPage({
               <p>Personalise your Pocketwise workspace.</p>
             </div>
           </div>
+
           <form className="stack-form" onSubmit={save}>
             <Field label="Full name">
               <input
@@ -1429,19 +1464,27 @@ function SettingsPage({
                 onChange={(e) => setName(e.target.value)}
               />
             </Field>
+
             <Field label="Email address">
               <input value={user.email} disabled />
               <small>Your sign-in email address.</small>
             </Field>
+
             <Field label="Display currency">
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+              >
                 <option value="PKR">PKR — Pakistani Rupee</option>
                 <option value="USD">USD — US Dollar</option>
                 <option value="EUR">EUR — Euro</option>
                 <option value="GBP">GBP — British Pound</option>
               </select>
             </Field>
-            <Button disabled={busy}>{busy ? 'Saving…' : 'Save profile'}</Button>
+
+            <Button disabled={busy}>
+              {busy ? 'Saving…' : 'Save profile'}
+            </Button>
           </form>
         </section>
 
@@ -1449,37 +1492,11 @@ function SettingsPage({
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <h2>Email verification</h2>
-                <p>Keep your account contact details verified.</p>
-              </div>
-            </div>
-            <div className="verification-status">
-              <div className={`verification-icon ${user.emailVerified ? 'verified' : ''}`}>
-                <Mail size={19} />
-              </div>
-              <div>
-                <strong>{user.emailVerified ? 'Email verified' : 'Email not verified'}</strong>
-                <small>
-                  {user.emailVerified
-                    ? 'Your email address has been confirmed.'
-                    : 'Check your inbox for a verification link.'}
-                </small>
-              </div>
-            </div>
-            {!user.emailVerified && (
-              <Button variant="secondary" onClick={onResendVerification}>
-                Resend verification email
-              </Button>
-            )}
-          </section>
-
-          <section className="panel">
-            <div className="panel-heading">
-              <div>
                 <h2>Change password</h2>
                 <p>Use a strong password you don't use elsewhere.</p>
               </div>
             </div>
+
             <form className="stack-form" onSubmit={change}>
               <Field label="Current password">
                 <input
@@ -1487,20 +1504,32 @@ function SettingsPage({
                   required
                   value={password.currentPassword}
                   onChange={(e) =>
-                    setPassword({ ...password, currentPassword: e.target.value })
+                    setPassword({
+                      ...password,
+                      currentPassword: e.target.value,
+                    })
                   }
                 />
               </Field>
+
               <Field label="New password">
                 <input
                   type="password"
                   required
                   minLength="10"
                   value={password.newPassword}
-                  onChange={(e) => setPassword({ ...password, newPassword: e.target.value })}
+                  onChange={(e) =>
+                    setPassword({
+                      ...password,
+                      newPassword: e.target.value,
+                    })
+                  }
                 />
-                <small>At least 10 characters, with uppercase, lowercase and a number.</small>
+                <small>
+                  At least 10 characters, with uppercase, lowercase and a number.
+                </small>
               </Field>
+
               <Button disabled={passwordBusy}>
                 {passwordBusy ? 'Updating…' : 'Update password'}
               </Button>
@@ -1512,66 +1541,169 @@ function SettingsPage({
   );
 }
 
-function VerifyEmailPage({ onDone }) {
-  const [status, setStatus] = useState('Verifying your email…');
-  const [error, setError] = useState(false);
-  const location = useLocation();
 
-  useEffect(() => {
-    const token = new URLSearchParams(location.search).get('token');
-    if (!token) {
-      setStatus('Verification link is missing.');
-      setError(true);
-      return;
-    }
-    apiRequest('/auth/verify-email', {
-      method: 'POST',
-      auth: false,
-      body: JSON.stringify({ token }),
-    })
-      .then((r) => setStatus(r.message))
-      .catch((e) => {
-        setStatus(e.message);
-        setError(true);
-      });
-  }, [location.search]);
+// function VerifyEmailPage({ onDone }) {
+//   const [status, setStatus] = useState('Verifying your email…');
+//   const [error, setError] = useState(false);
+//   const location = useLocation();
 
-  return (
-    <div className="simple-auth-page">
-      <div className="auth-card">
-        <div className="auth-security">
-          <Mail size={20} />
-        </div>
-        <h2>{error ? 'Verification unavailable' : 'Email verification'}</h2>
-        <p>{status}</p>
-        <Button onClick={onDone}>Continue to Pocketwise</Button>
-      </div>
-    </div>
-  );
-}
+//   useEffect(() => {
+//     const token = new URLSearchParams(location.search).get('token');
+//     if (!token) {
+//       setStatus('Verification link is missing.');
+//       setError(true);
+//       return;
+//     }
+//     apiRequest('/auth/verify-email', {
+//       method: 'POST',
+//       auth: false,
+//       body: JSON.stringify({ token }),
+//     })
+//       .then((r) => setStatus(r.message))
+//       .catch((e) => {
+//         setStatus(e.message);
+//         setError(true);
+//       });
+//   }, [location.search]);
 
-function ResetPasswordPage({ notify }) {
-  const location = useLocation();
+//   return (
+//     <div className="simple-auth-page">
+//       <div className="auth-card">
+//         <div className="auth-security">
+//           <Mail size={20} />
+//         </div>
+//         <h2>{error ? 'Verification unavailable' : 'Email verification'}</h2>
+//         <p>{status}</p>
+//         <Button onClick={onDone}>Continue to Pocketwise</Button>
+//       </div>
+//     </div>
+//   );
+// }
+
+// function ResetPasswordPage({ notify }) {
+//   const location = useLocation();
+//   const navigate = useNavigate();
+//   const token = new URLSearchParams(location.search).get('token') || '';
+//   const [password, setPassword] = useState('');
+//   const [error, setError] = useState('');
+//   const [busy, setBusy] = useState(false);
+
+//   async function submit(e) {
+//     e.preventDefault();
+//     setBusy(true);
+//     setError('');
+//     try {
+//       const data = await apiRequest('/auth/reset-password', {
+//         method: 'POST',
+//         auth: false,
+//         body: JSON.stringify({ token, password }),
+//       });
+//       notify(data.message);
+//       navigate('/');
+//     } catch (e) {
+//       setError(e.message);
+//     } finally {
+//       setBusy(false);
+//     }
+//   }
+
+//   return (
+//     <div className="simple-auth-page">
+//       <div className="auth-card">
+//         <div className="eyebrow">ACCOUNT RECOVERY</div>
+//         <h2>Set a new password</h2>
+//         <p>Choose a strong password for your Pocketwise account.</p>
+//         <form className="stack-form" onSubmit={submit}>
+//           <Field label="New password">
+//             <input
+//               type="password"
+//               required
+//               minLength="10"
+//               value={password}
+//               onChange={(e) => setPassword(e.target.value)}
+//             />
+//             <small>At least 10 characters, with uppercase, lowercase and a number.</small>
+//           </Field>
+//           {error && <div className="inline-error">{error}</div>}
+//           <Button disabled={busy || !token}>{busy ? 'Updating…' : 'Reset password'}</Button>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
+
+function ForgotPasswordPage({ notify }) {
   const navigate = useNavigate();
-  const token = new URLSearchParams(location.search).get('token') || '';
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
 
-  async function submit(e) {
+  const [step, setStep] = useState('verify');
+  const [form, setForm] = useState({
+    email: '',
+    dateOfBirth: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [resetToken, setResetToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const update = (e) => {
+    setForm((old) => ({
+      ...old,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  async function verifyIdentity(e) {
     e.preventDefault();
     setBusy(true);
     setError('');
+
+    try {
+      const data = await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        auth: false,
+        body: JSON.stringify({
+          email: form.email,
+          dateOfBirth: form.dateOfBirth,
+        }),
+      });
+
+      setResetToken(data.resetToken);
+      setStep('password');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPassword(e) {
+    e.preventDefault();
+    setError('');
+
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setBusy(true);
+
     try {
       const data = await apiRequest('/auth/reset-password', {
         method: 'POST',
         auth: false,
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({
+          token: resetToken,
+          password: form.password,
+        }),
       });
+
+      setResetToken('');
       notify(data.message);
       navigate('/');
-    } catch (e) {
-      setError(e.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -1581,26 +1713,113 @@ function ResetPasswordPage({ notify }) {
     <div className="simple-auth-page">
       <div className="auth-card">
         <div className="eyebrow">ACCOUNT RECOVERY</div>
-        <h2>Set a new password</h2>
-        <p>Choose a strong password for your Pocketwise account.</p>
-        <form className="stack-form" onSubmit={submit}>
-          <Field label="New password">
-            <input
-              type="password"
-              required
-              minLength="10"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <small>At least 10 characters, with uppercase, lowercase and a number.</small>
-          </Field>
-          {error && <div className="inline-error">{error}</div>}
-          <Button disabled={busy || !token}>{busy ? 'Updating…' : 'Reset password'}</Button>
-        </form>
+
+        {step === 'verify' ? (
+          <>
+            <h2>Forgot your password?</h2>
+            <p>
+              Verify your identity using the email address and date of birth
+              associated with your account.
+            </p>
+
+            <form className="stack-form" onSubmit={verifyIdentity}>
+              <Field label="Email address">
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={update}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                />
+              </Field>
+
+              <Field label="Date of birth">
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  value={form.dateOfBirth}
+                  onChange={update}
+                  max={today()}
+                  required
+                />
+              </Field>
+
+              {error && (
+                <div className="inline-error">
+                  <AlertCircle size={15} />
+                  {error}
+                </div>
+              )}
+
+              <Button disabled={busy}>
+                {busy ? 'Verifying…' : 'Verify identity'}
+              </Button>
+            </form>
+          </>
+        ) : (
+          <>
+            <h2>Create a new password</h2>
+            <p>
+              Your identity has been verified. Choose a strong password for
+              your account.
+            </p>
+
+            <form className="stack-form" onSubmit={resetPassword}>
+              <Field label="New password">
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={update}
+                  minLength="10"
+                  autoComplete="new-password"
+                  required
+                />
+                <small>
+                  At least 10 characters, with uppercase, lowercase and a number.
+                </small>
+              </Field>
+
+              <Field label="Confirm new password">
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={update}
+                  minLength="10"
+                  autoComplete="new-password"
+                  required
+                />
+              </Field>
+
+              {error && (
+                <div className="inline-error">
+                  <AlertCircle size={15} />
+                  {error}
+                </div>
+              )}
+
+              <Button disabled={busy || !resetToken}>
+                {busy ? 'Updating…' : 'Reset password'}
+              </Button>
+            </form>
+          </>
+        )}
+
+        <button
+          type="button"
+          className="text-button forgot-button"
+          onClick={() => navigate('/')}
+        >
+          Back to sign in
+        </button>
       </div>
     </div>
   );
 }
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -1807,10 +2026,10 @@ export default function App() {
     await logout();
   }
 
-  async function resendVerification() {
-    const data = await apiRequest('/auth/resend-verification', { method: 'POST' });
-    notify(data.message);
-  }
+  // async function resendVerification() {
+  //   const data = await apiRequest('/auth/resend-verification', { method: 'POST' });
+  //   notify(data.message);
+  // }
 
   if (booting) {
     return (
@@ -1823,19 +2042,10 @@ export default function App() {
     );
   }
 
-  if (location.pathname === '/verify-email') {
+  if (location.pathname === '/forgot-password') {
     return (
       <>
-        <VerifyEmailPage onDone={() => navigate('/')} />
-        <Toast toast={toast} clear={clearToast} />
-      </>
-    );
-  }
-
-  if (location.pathname === '/reset-password') {
-    return (
-      <>
-        <ResetPasswordPage notify={notify} />
+        <ForgotPasswordPage notify={notify} />
         <Toast toast={toast} clear={clearToast} />
       </>
     );
@@ -1943,7 +2153,6 @@ export default function App() {
                 user={user}
                 onProfileSave={saveProfile}
                 onPasswordChange={changePassword}
-                onResendVerification={resendVerification}
                 notify={notify}
               />
             }

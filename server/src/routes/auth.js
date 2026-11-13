@@ -6,10 +6,28 @@ const Category = require('../models/Category');
 const RefreshSession = require('../models/RefreshSession');
 const OneTimeToken = require('../models/OneTimeToken');
 const requireAuth = require('../middleware/auth');
-const sendActionEmail = require('../utils/email');
-const { hashToken, accessToken, createRefreshSession, cookieOptions } = require('../utils/tokens');
+const { hashToken, accessToken, createRefreshSession, cookieOptions } = require('../utils/tokens'); const rateLimit = require('express-rate-limit');
+
+const passwordRecoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Too many attempts. Please try again after 15 minutes.'
+  }
+});
 const router = express.Router();
-const clientUrl = () => (process.env.CLIENT_ORIGIN ).split(',')[0].trim();
+
+function safeUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    currency: user.currency,
+  };
+}
+
 function requireTrustedOrigin(req, res, next) {
   const origin = req.get('origin');
   const allowed = (process.env.CLIENT_ORIGIN || 'https://personal-expense-management-system-liard.vercel.app').split(',').map(x => x.trim());
@@ -17,11 +35,17 @@ function requireTrustedOrigin(req, res, next) {
   if (!origin || !allowed.includes(origin)) return res.status(403).json({ message: 'Request origin is not allowed.' });
   next();
 }
-const safeUser = user => ({ id: user._id, name: user.name, email: user.email, currency: user.currency, emailVerified: Boolean(user.emailVerifiedAt) });
 const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || ''));
 const issueOneTimeToken = async (user, purpose) => {
   const raw = crypto.randomBytes(32).toString('base64url');
-  await OneTimeToken.create({ userId: user._id, tokenHash: hashToken(raw), purpose, expiresAt: new Date(Date.now() + (purpose === 'verify-email' ? 24 : 1) * 3600000) });
+
+  await OneTimeToken.create({
+    userId: user._id,
+    tokenHash: hashToken(raw),
+    purpose,
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000)
+  });
+
   return raw;
 };
 async function startSession(user, req, res) {
@@ -35,20 +59,32 @@ router.post('/register', async (req, res, next) => {
     const name = String(req.body.name || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
+    const dateOfBirth = String(req.body.dateOfBirth || '').trim();
+
+    const dob = new Date(`${dateOfBirth}T00:00:00.000Z`);
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth) ||
+      Number.isNaN(dob.getTime()) ||
+      dob.toISOString().slice(0, 10) !== dateOfBirth ||
+      dob >= new Date()
+    ) {
+      return res.status(400).json({
+        message: 'Enter a valid date of birth.'
+      });
+    }
     if (name.length < 2 || name.length > 70) return res.status(400).json({ message: 'Name must be between 2 and 70 characters.' });
     if (!validEmail(email)) return res.status(400).json({ message: 'Enter a valid email address.' });
     if (password.length < 10 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) return res.status(400).json({ message: 'Password must be at least 10 characters and include uppercase, lowercase and a number.' });
     if (await User.exists({ email })) return res.status(409).json({ message: 'An account with this email already exists.' });
-    const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
+    const user = await User.create({ name, email, dateOfBirth, passwordHash: await bcrypt.hash(password, 12) });
     const defaults = [
       ['Food & Dining', '#7770f5', 'utensils'], ['Transport', '#26b6a6', 'car'], ['Shopping', '#f4a340', 'shopping-bag'],
       ['Bills & Utilities', '#ed7194', 'house'], ['Health', '#48a9e6', 'heart-pulse'], ['Education', '#9b7bea', 'graduation-cap'], ['Other', '#9297a8', 'tag'],
     ];
     await Category.insertMany(defaults.map(([categoryName, color, icon]) => ({ userId: user._id, name: categoryName, color, icon })));
-    const token = await issueOneTimeToken(user, 'verify-email');
-    await sendActionEmail({ to: user.email, subject: 'Verify your Pocketwise email', text: `Welcome to Pocketwise. Verify your email: ${clientUrl()}/verify-email?token=${token}` });
     const session = await startSession(user, req, res);
-    res.status(201).json({ ...session, message: 'Account created. Check your email for a verification link.' });
+    res.status(201).json({ ...session, message: 'Account created successfully.' });
   } catch (error) { next(error); }
 });
 
@@ -95,35 +131,75 @@ router.post('/logout', requireTrustedOrigin, async (req, res, next) => {
 });
 router.get('/me', requireAuth, (req, res) => res.json({ user: safeUser(req.user) }));
 
-router.post('/verify-email', async (req, res, next) => {
-  try {
-    const raw = String(req.body.token || '');
-    const record = await OneTimeToken.findOne({ tokenHash: hashToken(raw), purpose: 'verify-email', usedAt: null, expiresAt: { $gt: new Date() } });
-    if (!record) return res.status(400).json({ message: 'This verification link is invalid or expired.' });
-    record.usedAt = new Date(); await record.save();
-    await User.findByIdAndUpdate(record.userId, { emailVerifiedAt: new Date() });
-    res.json({ message: 'Email verified successfully.' });
-  } catch (error) { next(error); }
-});
-router.post('/resend-verification', requireAuth, async (req, res, next) => {
-  try {
-    if (req.user.emailVerifiedAt) return res.json({ message: 'Your email is already verified.' });
-    const token = await issueOneTimeToken(req.user, 'verify-email');
-    await sendActionEmail({ to: req.user.email, subject: 'Verify your Pocketwise email', text: `Verify your email: ${clientUrl()}/verify-email?token=${token}` });
-    res.json({ message: 'If your email is eligible, a verification link has been sent.' });
-  } catch (error) { next(error); }
-});
-router.post('/forgot-password', async (req, res, next) => {
+// router.post('/verify-email', async (req, res, next) => {
+//   try {
+//     const raw = String(req.body.token || '');
+//     const record = await OneTimeToken.findOne({ tokenHash: hashToken(raw), purpose: 'verify-email', usedAt: null, expiresAt: { $gt: new Date() } });
+//     if (!record) return res.status(400).json({ message: 'This verification link is invalid or expired.' });
+//     record.usedAt = new Date(); await record.save();
+//     await User.findByIdAndUpdate(record.userId, { emailVerifiedAt: new Date() });
+//     res.json({ message: 'Email verified successfully.' });
+//   } catch (error) { next(error); }
+// });
+// router.post('/resend-verification', requireAuth, async (req, res, next) => {
+//   try {
+//     if (req.user.emailVerifiedAt) return res.json({ message: 'Your email is already verified.' });
+//     const token = await issueOneTimeToken(req.user, 'verify-email');
+//     await sendActionEmail({ to: req.user.email, subject: 'Verify your Pocketwise email', text: `Verify your email: ${clientUrl()}/verify-email?token=${token}` });
+//     res.json({ message: 'If your email is eligible, a verification link has been sent.' });
+//   } catch (error) { next(error); }
+// });
+// router.post('/forgot-password', async (req, res, next) => {
+//   try {
+//     const email = String(req.body.email || '').trim().toLowerCase();
+//     const user = await User.findOne({ email });
+//     if (user) {
+//       const token = await issueOneTimeToken(user, 'reset-password');
+//       await sendActionEmail({ to: user.email, subject: 'Reset your Pocketwise password', text: `Reset your password within one hour: ${clientUrl()}/reset-password?token=${token}` });
+//     }
+//     res.json({ message: 'If an account exists for that email, a password reset link has been sent.' });
+//   } catch (error) { next(error); }
+// });
+
+router.post('/forgot-password', passwordRecoveryLimiter, async (req, res, next) => {
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
-    const user = await User.findOne({ email });
-    if (user) {
-      const token = await issueOneTimeToken(user, 'reset-password');
-      await sendActionEmail({ to: user.email, subject: 'Reset your Pocketwise password', text: `Reset your password within one hour: ${clientUrl()}/reset-password?token=${token}` });
+    const dateOfBirth = String(req.body.dateOfBirth || '').trim();
+
+    console.log('Recovery email:', email);
+    console.log('Recovery DOB:', dateOfBirth);
+ const user = await User.findOne({ email });
+
+const dobMatches =
+  user &&
+  String(user.dateOfBirth).trim() === dateOfBirth;
+
+console.log('DOB matches:', dobMatches);
+
+if (!user || !dobMatches) {
+  return res.status(400).json({
+    message: 'The provided details could not be verified.',
+  });
+}
+    console.log('User found:', !!user);
+    
+    if (!user) {
+      return res.status(400).json({
+        message: 'The provided details could not be verified.'
+      });
     }
-    res.json({ message: 'If an account exists for that email, a password reset link has been sent.' });
-  } catch (error) { next(error); }
+
+    const token = await issueOneTimeToken(user, 'reset-password');
+
+    res.json({
+      message: 'Identity verified successfully.',
+      resetToken: token
+    });
+  } catch (error) {
+    next(error);
+  }
 });
+
 router.post('/reset-password', async (req, res, next) => {
   try {
     const raw = String(req.body.token || ''); const password = String(req.body.password || '');
