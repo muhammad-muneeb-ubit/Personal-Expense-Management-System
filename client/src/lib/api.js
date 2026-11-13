@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ;
+const API_URL = import.meta.env.API_URL || 'https://personal-expense-management-system-mote.onrender.com/api';
 let accessToken = null;
 let refreshing = null;
 export const setAccessToken = token => { accessToken = token || null; };

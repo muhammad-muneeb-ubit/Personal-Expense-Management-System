@@ -179,7 +179,7 @@ Never commit `.env` files or share SMTP credentials. In production, configure a 
 ### Frontend (`client/.env`)
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+API_URL=http://localhost:5000/api
 ```
 
 ## API overview
