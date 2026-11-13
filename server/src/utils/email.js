@@ -1,10 +1,36 @@
-const nodemailer = require('nodemailer');
+
+const { Resend } = require('resend');
+
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
+
 async function sendActionEmail({ to, subject, text }) {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
-    const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: process.env.SMTP_SECURE === 'true', auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } });
-    await transporter.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text });
+  if (resend) {
+    const { data, error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'PocketWise <onboarding@resend.dev>',
+      to,
+      subject,
+      text,
+    });
+
+    if (error) {
+      console.error('Resend email error:', error);
+      throw new Error('Failed to send email.');
+    }
+
+    console.log('Email sent successfully:', data.id);
+    return data;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      `\n[EMAIL PREVIEW]\nTo: ${to}\nSubject: ${subject}\n${text}\n`
+    );
     return;
   }
-  if (process.env.NODE_ENV !== 'production') console.log(`\n[EMAIL PREVIEW]\nTo: ${to}\nSubject: ${subject}\n${text}\n`);
+
+  throw new Error('Email service is not configured.');
 }
+
 module.exports = sendActionEmail;
