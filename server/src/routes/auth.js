@@ -9,10 +9,10 @@ const requireAuth = require('../middleware/auth');
 const sendActionEmail = require('../utils/email');
 const { hashToken, accessToken, createRefreshSession, cookieOptions } = require('../utils/tokens');
 const router = express.Router();
-const clientUrl = () => (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',')[0].trim();
+const clientUrl = () => (process.env.CLIENT_ORIGIN ).split(',')[0].trim();
 function requireTrustedOrigin(req, res, next) {
   const origin = req.get('origin');
-  const allowed = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map(x => x.trim());
+  const allowed = (process.env.CLIENT_ORIGIN || 'https://personal-expense-management-system-liard.vercel.app').split(',').map(x => x.trim());
   if (!origin && process.env.NODE_ENV !== 'production') return next();
   if (!origin || !allowed.includes(origin)) return res.status(403).json({ message: 'Request origin is not allowed.' });
   next();
