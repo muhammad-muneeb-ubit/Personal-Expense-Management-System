@@ -14,6 +14,7 @@ const budgetRoutes = require('./routes/budgets');
 const insightsRoutes = require('./routes/insights');
 const settingsRoutes = require('./routes/settings');
 const lendingRoutes = require('./routes/lending');
+const qrCodeRoutes = require("./routes/qrCodes");
 
 const app = express();
 app.disable('x-powered-by');
@@ -24,6 +25,7 @@ app.use(helmet());
 app.use(cors({ origin(origin, callback) { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin is not allowed by CORS.')); }, credentials: true }));
 app.use(express.json({ limit: '30kb' }));
 app.use(cookieParser());
+
 if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false, message: { message: 'Too many authentication attempts. Please try again later.' } });
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'pocketwise-api' }));
@@ -35,6 +37,7 @@ app.use('/api/budgets', budgetRoutes);
 app.use('/api/insights', insightsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/lending', lendingRoutes);
+app.use("/api/qr-codes",  qrCodeRoutes);
 
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 app.use((error, req, res, next) => {

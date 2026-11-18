@@ -12,7 +12,7 @@ const navItems = [
   { to: '/budgets', label: 'Budgets', icon: WalletCards },
   { to: '/money-lent', label: 'Money Lent', icon: HandCoins },
   { to: '/reports', label: 'Reports', icon: ChartNoAxesCombined },
-  { to: '/qr-code', label: 'QR Code', icon: Search },
+  { to: '/qr-generator', label: 'QR Code', icon: Search },
 ];
 
 const categoryIcons = {
