@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck,  UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck, UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, QrCode} from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, } from 'recharts';
 import { apiRequest, refreshSession, setAccessToken } from './lib/api';
 import MoneyLentPage from './pages/MoneyLentPage';
-
+import QRCodeGenerator from "./pages/QRCodeGenerator";
 const navItems = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
   { to: '/expenses', label: 'Transactions', icon: ReceiptText },
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/budgets', label: 'Budgets', icon: WalletCards },
   { to: '/money-lent', label: 'Money Lent', icon: HandCoins },
   { to: '/reports', label: 'Reports', icon: ChartNoAxesCombined },
+  { to: '/qr-code', label: 'QR Code', icon: Search },
 ];
 
 const categoryIcons = {
@@ -135,12 +136,12 @@ function AuthScreen({ onAuthenticated, notify }) {
       const data = await apiRequest(endpoint, {
         method: 'POST',
         auth: false,
-        body: JSON.stringify(  mode === 'register'
-    ? form
-    : {
-        email: form.email,
-        password: form.password,
-      }),
+        body: JSON.stringify(mode === 'register'
+          ? form
+          : {
+            email: form.email,
+            password: form.password,
+          }),
       });
 
       setAccessToken(data.accessToken);
@@ -2156,6 +2157,10 @@ export default function App() {
                 notify={notify}
               />
             }
+          />
+          <Route
+            path="/qr-generator"
+            element={<QRCodeGenerator />}
           />
           <Route
             path="/money-lent"
