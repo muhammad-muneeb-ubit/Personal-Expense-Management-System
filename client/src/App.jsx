@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck, UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, QrCode} from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Tags, WalletCards, ChartNoAxesCombined, Settings, Plus, ArrowUpRight, ArrowDownRight, Menu, X, Utensils, Car, ShoppingBag, House, HeartPulse, GraduationCap, CircleDollarSign, Search, Trash2, Pencil, LogOut, ChevronDown, CalendarDays, TrendingUp, PiggyBank, ShieldCheck, UserRound, Eye, EyeOff, Download, RotateCcw, CheckCircle2, AlertCircle, Archive, Wallet, HandCoins, QrCode, QrCodeIcon} from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, } from 'recharts';
 import { apiRequest, refreshSession, setAccessToken } from './lib/api';
 import MoneyLentPage from './pages/MoneyLentPage';
@@ -8,11 +8,11 @@ import QRCodeGenerator from "./pages/QRCodeGenerator";
 const navItems = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
   { to: '/expenses', label: 'Transactions', icon: ReceiptText },
-  { to: '/categories', label: 'Categories', icon: Tags },
   { to: '/budgets', label: 'Budgets', icon: WalletCards },
   { to: '/money-lent', label: 'Money Lent', icon: HandCoins },
+  { to: '/qr-generator', label: 'QR Code', icon: QrCodeIcon },
+  { to: '/categories', label: 'Categories', icon: Tags },
   { to: '/reports', label: 'Reports', icon: ChartNoAxesCombined },
-  { to: '/qr-generator', label: 'QR Code', icon: Search },
 ];
 
 const categoryIcons = {
@@ -519,8 +519,8 @@ function TransactionTable({ expenses, currency, onDelete, onEdit, compact = fals
                   )}
                 </tr>
               );
-            })
-          ) : (
+            }))
+          : (
             <tr>
               <td colSpan={onDelete && !compact ? 6 : 5} className="empty-state">
                 No transactions found. Add an expense to get started.
@@ -2160,7 +2160,7 @@ export default function App() {
           />
           <Route
             path="/qr-generator"
-            element={<QRCodeGenerator />}
+            element={<QRCodeGenerator notify={notify} />}
           />
           <Route
             path="/money-lent"

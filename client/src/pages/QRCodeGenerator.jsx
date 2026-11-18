@@ -1,16 +1,16 @@
-
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
-import { QrCode, Download, Copy, Trash2, Link, Plus, ExternalLink, } from "lucide-react";
+import { QrCode, Download, Copy, Trash2, Link, ExternalLink, AlertTriangle, X } from "lucide-react";
 import { apiRequest } from '../lib/api';
 
-export default function QRCodeGenerator() {
+export default function QRCodeGenerator({ notify }) {
     const [url, setUrl] = useState("");
     const [qrImage, setQrImage] = useState("");
     const [history, setHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
     useEffect(() => {
         fetchHistory();
@@ -29,15 +29,6 @@ export default function QRCodeGenerator() {
             setLoadingHistory(false);
         }
     };
-
-    const response =  apiRequest("/qr-codes", {
-        method: "POST",
-        body: JSON.stringify({
-            url: cleanUrl,
-        }),
-    });
-
-    setHistory((prev) => [response.data, ...prev]);
 
     const deleteQR = async (id) => {
         try {
@@ -60,12 +51,15 @@ export default function QRCodeGenerator() {
             });
 
             setHistory([]);
+            setClearConfirmOpen(false);
+            notify?.("All generated QR codes deleted.");
         } catch (error) {
             console.error("Failed to clear history:", error);
+            notify?.(error.message, "error");
         }
     };
 
-    const generateQR = async (inputUrl = url) => {
+    const generateQR = async (inputUrl = url, saveToHistory = true) => {
         setError("");
         setQrImage("");
 
@@ -102,15 +96,16 @@ export default function QRCodeGenerator() {
             });
 
             setQrImage(image);
-            setUrl(cleanUrl);
+            setUrl("");
 
-            const newItem = {
-                id: Date.now(),
-                url: cleanUrl,
-                createdAt: new Date().toISOString(),
-            };
+            if (saveToHistory) {
+                const response = await apiRequest("/qr-codes", {
+                    method: "POST",
+                    body: JSON.stringify({ url: cleanUrl }),
+                });
 
-            saveHistory([newItem, ...history]);
+                setHistory((prev) => [response.data, ...prev]);
+            }
         } catch (err) {
             setError("Unable to generate QR code. Please try again.");
         } finally {
@@ -137,51 +132,37 @@ export default function QRCodeGenerator() {
 
     const regenerateQR = async (item) => {
         setUrl(item.url);
-        await generateQR(item.url);
+        await generateQR(item.url, false);
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                        <QrCode size={24} />
-                    </div>
-
-                    <div>
-                        <h1 className="text-2xl font-bold">QR Code Generator</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Generate and manage QR codes for your URLs
-                        </p>
-                    </div>
+        <div className="page-content qr-page">
+            <div className="page-heading">
+                <div>
+                    <div className="eyebrow">POCKETWISE WORKSPACE</div>
+                    <h1>QR Code Generator</h1>
+                    <p>Generate, preview, download, and manage QR codes for your URLs.</p>
                 </div>
             </div>
 
-            {/* Generator */}
-            <div className="grid gap-6 lg:grid-cols-2">
-                {/* Input */}
-                <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">Generate QR Code</h2>
-
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            generateQR();
-                        }}
-                        className="space-y-4"
-                    >
+            <div className="qr-generator-grid">
+                <section className="panel qr-generator-panel">
+                    <div className="panel-heading">
                         <div>
-                            <label className="mb-2 block text-sm font-medium">
-                                Website URL
-                            </label>
+                            <h2>Generate QR Code</h2>
+                            <p>Create a QR code from a website URL.</p>
+                        </div>
+                        <div className="stat-icon purple"><QrCode size={18} /></div>
+                    </div>
 
-                            <div className="relative">
-                                <Link
-                                    size={18}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                />
-
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        generateQR();
+                    }} className="qr-form">
+                        <label className="field">
+                            <span>Website URL</span>
+                            <div className="qr-input-wrap">
+                                <Link size={17} />
                                 <input
                                     type="text"
                                     value={url}
@@ -190,185 +171,136 @@ export default function QRCodeGenerator() {
                                         setError("");
                                     }}
                                     placeholder="https://example.com"
-                                    className="w-full rounded-xl border bg-background py-3 pl-10 pr-4 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
+                            <small>HTTPS will be added automatically if missing.</small>
+                        </label>
 
-                            <p className="mt-2 text-xs text-muted-foreground">
-                                Enter a website URL. HTTPS will be added automatically if missing.
-                            </p>
-                        </div>
+                        {error && <p className="inline-error"><AlertTriangle size={15} />{error}</p>}
 
-                        {error && (
-                            <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500">
-                                {error}
-                            </p>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-                        >
-                            <QrCode size={18} />
+                        <button type="submit" disabled={loading} className="button primary qr-primary-button">
+                            <QrCode size={17} />
                             {loading ? "Generating..." : "Generate QR Code"}
                         </button>
                     </form>
-                </div>
+                </section>
 
-                {/* Preview */}
-                <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">QR Code Preview</h2>
+                <section className="panel qr-preview-panel">
+                    <div className="panel-heading">
+                        <div>
+                            <h2>QR Code Preview</h2>
+                            <p>Preview and save the generated image.</p>
+                        </div>
+                    </div>
 
                     {qrImage ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <div className="rounded-2xl border bg-white p-4">
-                                <img
-                                    src={qrImage}
-                                    alt="Generated QR Code"
-                                    className="h-64 w-64 object-contain"
-                                />
+                        <div className="qr-preview-content">
+                            <div className="qr-image-wrap">
+                                <img src={qrImage} alt="Generated QR Code" />
                             </div>
-
-                            <p className="max-w-full break-all text-center text-sm text-muted-foreground">
-                                {url}
-                            </p>
-
-                            <div className="flex w-full flex-wrap justify-center gap-3">
-                                <button
-                                    onClick={() => downloadQR()}
-                                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
-                                >
-                                    <Download size={16} />
-                                    Download PNG
+                            <p className="qr-preview-url">{url}</p>
+                            <div className="qr-preview-actions">
+                                <button onClick={() => downloadQR()} className="button primary">
+                                    <Download size={16} /> Download PNG
                                 </button>
-
-                                <button
-                                    onClick={() => copyUrl()}
-                                    className="flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium"
-                                >
-                                    <Copy size={16} />
-                                    Copy URL
+                                <button onClick={() => copyUrl()} className="button secondary">
+                                    <Copy size={16} /> Copy URL
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed text-center">
-                            <QrCode
-                                size={64}
-                                className="mb-4 text-muted-foreground/40"
-                            />
-
-                            <p className="font-medium">No QR code generated yet</p>
-
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Enter a URL to generate your QR code
-                            </p>
+                        <div className="qr-empty-preview">
+                            <div className="qr-empty-icon"><QrCode size={38} /></div>
+                            <strong>No QR code generated yet</strong>
+                            <p>Enter a URL to generate your QR code.</p>
                         </div>
                     )}
-                </div>
+                </section>
+
+                <section className="panel qr-history-panel">
+                    <div className="panel-heading qr-history-heading">
+                        <div>
+                            <h2>QR Code History</h2>
+                            <p>{history.length} QR code{history.length !== 1 ? "s" : ""} generated</p>
+                        </div>
+
+                        {history.length > 0 && (
+                            <button
+                                onClick={() => setClearConfirmOpen(true)}
+                                className="button qr-clear-button"
+                            >
+                                <Trash2 size={15} /> Clear History
+                            </button>
+                        )}
+                    </div>
+
+                    {loadingHistory ? (
+                        <div className="qr-empty-preview qr-history-empty"><p>Loading QR history...</p></div>
+                    ) : history.length === 0 ? (
+                        <div className="qr-empty-preview qr-history-empty">
+                            <div className="qr-empty-icon"><QrCode size={34} /></div>
+                            <strong>No QR codes generated yet</strong>
+                            <p>Your generated codes will appear here.</p>
+                        </div>
+                    ) : (
+                        <div className="qr-history-list">
+                            {history.map((item) => (
+                                <div key={item._id} className="qr-history-item">
+                                    <div className="qr-history-info">
+                                        <strong>{item.url}</strong>
+                                        <span>{new Date(item.createdAt).toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="qr-row-actions">
+                                        <button onClick={() => regenerateQR(item)} title="Preview QR"><QrCode size={16} /></button>
+                                        <button onClick={() => copyUrl(item.url)} title="Copy URL"><Copy size={16} /></button>
+                                        <button
+                                            onClick={async () => {
+                                                const image = await QRCode.toDataURL(item.url, {
+                                                    width: 600,
+                                                    margin: 3,
+                                                    errorCorrectionLevel: "H",
+                                                });
+                                                downloadQR(image, `qr-${item._id}.png`);
+                                            }}
+                                            title="Download QR"
+                                        ><Download size={16} /></button>
+                                        <a href={item.url} target="_blank" rel="noopener noreferrer" title="Open URL">
+                                            <ExternalLink size={16} />
+                                        </a>
+                                        <button onClick={() => deleteQR(item._id)} title="Delete" className="qr-delete-action">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
             </div>
 
-            {/* History */}
-            <div className="rounded-2xl border bg-card p-5 shadow-sm">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h2 className="text-lg font-semibold">QR Code History</h2>
-                        <p className="text-sm text-muted-foreground">
-                            {history.length} QR code{history.length !== 1 ? "s" : ""} generated
-                        </p>
-                    </div>
-
-                    {history.length > 0 && (
-                        <button
-                            onClick={clearHistory}
-                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 transition hover:bg-red-500/10"
-                        >
-                            <Trash2 size={16} />
-                            Clear History
-                        </button>
-                    )}
-                </div>
-
-                {history.length === 0 ? (
-                    <div className="py-12 text-center text-muted-foreground">
-                        <QrCode size={40} className="mx-auto mb-3 opacity-40" />
-                        <p>No QR codes generated yet.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {history.map((item) => (
-                            <div
-                                key={item.id}
-                                className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                                <div className="min-w-0">
-                                    <p className="break-all font-medium">{item.url}</p>
-
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        {new Date(item.createdAt).toLocaleString()}
-                                    </p>
-                                </div>
-
-                                <div className="flex shrink-0 items-center gap-2">
-                                    <button
-                                        onClick={() => regenerateQR(item)}
-                                        className="rounded-lg border p-2 transition hover:bg-muted"
-                                        title="Preview QR"
-                                    >
-                                        <QrCode size={18} />
-                                    </button>
-
-                                    <button
-                                        onClick={() => copyUrl(item.url)}
-                                        className="rounded-lg border p-2 transition hover:bg-muted"
-                                        title="Copy URL"
-                                    >
-                                        <Copy size={18} />
-                                    </button>
-
-                                    <button
-                                        onClick={async () => {
-                                            const image = await QRCode.toDataURL(item.url, {
-                                                width: 600,
-                                                margin: 3,
-                                                errorCorrectionLevel: "H",
-                                            });
-
-                                            downloadQR(
-                                                image,
-                                                `qr-${item.id}.png`
-                                            );
-                                        }}
-                                        className="rounded-lg border p-2 transition hover:bg-muted"
-                                        title="Download QR"
-                                    >
-                                        <Download size={18} />
-                                    </button>
-
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="rounded-lg border p-2 transition hover:bg-muted"
-                                        title="Open URL"
-                                    >
-                                        <ExternalLink size={18} />
-                                    </a>
-
-                                    <button
-                                        onClick={() => deleteQR(item.id)}
-                                        className="rounded-lg border p-2 text-red-500 transition hover:bg-red-500/10"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
+            {clearConfirmOpen && (
+                <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setClearConfirmOpen(false)}>
+                    <section className="modal qr-confirm-modal">
+                        <div className="modal-heading">
+                            <div className="qr-confirm-heading">
+                                <div className="qr-confirm-icon"><AlertTriangle size={20} /></div>
+                                <div>
+                                    <h2>Clear QR history?</h2>
+                                    <p>Are you sure you want to delete all generated QR codes?</p>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            <button className="icon-button" onClick={() => setClearConfirmOpen(false)}><X size={19} /></button>
+                        </div>
+                        <div className="modal-actions">
+                            <button className="button secondary" onClick={() => setClearConfirmOpen(false)}>Cancel</button>
+                            <button className="button qr-confirm-delete" onClick={clearHistory}>
+                                <Trash2 size={15} /> Delete All
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
         </div>
     );
 }

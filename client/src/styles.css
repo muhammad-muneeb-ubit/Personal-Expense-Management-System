@@ -1962,3 +1962,269 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+/* QR Code Generator */
+.qr-generator-grid {
+    display: grid;
+    grid-template-columns: minmax(280px, .85fr) minmax(320px, 1.15fr);
+    gap: 16px;
+}
+
+.qr-generator-panel,
+.qr-preview-panel,
+.qr-history-panel {
+    min-width: 0;
+}
+
+.qr-history-panel {
+    grid-column: 1 / -1;
+}
+
+.qr-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.qr-input-wrap {
+    position: relative;
+}
+
+.qr-input-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9a9daf;
+}
+
+.qr-input-wrap input {
+    padding-left: 38px;
+}
+
+.qr-primary-button {
+    width: 100%;
+}
+
+.qr-preview-panel {
+    min-height: 300px;
+}
+
+.qr-preview-content {
+    display: flex;
+    min-height: 250px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 14px;
+}
+
+.qr-image-wrap {
+    padding: 10px;
+    border: 1px solid #eceef4;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.qr-image-wrap img {
+    display: block;
+    width: 210px;
+    height: 210px;
+    object-fit: contain;
+}
+
+.qr-preview-url {
+    max-width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: center;
+    color: #989bad;
+    font-size: 10px;
+}
+
+.qr-preview-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.qr-empty-preview {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.qr-empty-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 12px;
+    border-radius: 16px;
+    background: #f0efff;
+    color: #7169ee;
+}
+
+.qr-empty-preview strong {
+    color: #55586d;
+    font-size: 12px;
+}
+
+.qr-empty-preview p {
+    margin: 6px 0 0;
+    color: #a1a4b3;
+    font-size: 10px;
+}
+
+.qr-history-heading {
+    align-items: center;
+}
+
+.qr-clear-button {
+    min-height: 36px;
+    color: #d64e65;
+    background: #fff4f5;
+    border-color: #fde1e5;
+}
+
+.qr-clear-button:hover {
+    background: #ffecee;
+}
+
+.qr-history-empty {
+    min-height: 160px;
+}
+
+.qr-history-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.qr-history-item {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 13px;
+    border: 1px solid #eceef4;
+    border-radius: 9px;
+}
+
+.qr-history-info {
+    min-width: 0;
+}
+
+.qr-history-info strong,
+.qr-history-info span {
+    display: block;
+}
+
+.qr-history-info strong {
+    overflow-wrap: anywhere;
+    color: #45475d;
+    font-size: 11px;
+}
+
+.qr-history-info span {
+    margin-top: 4px;
+    color: #a1a4b3;
+    font-size: 9px;
+}
+
+.qr-row-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+}
+
+.qr-row-actions button,
+.qr-row-actions a {
+    width: 31px;
+    height: 31px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #85899d;
+    display: grid;
+    place-items: center;
+    text-decoration: none;
+}
+
+.qr-row-actions button:hover,
+.qr-row-actions a:hover {
+    background: #f1f0ff;
+    color: #655ee8;
+}
+
+.qr-row-actions .qr-delete-action:hover {
+    background: #fff1f3;
+    color: #d64e65;
+}
+
+.qr-confirm-modal {
+    width: min(100%, 430px);
+}
+
+.qr-confirm-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.qr-confirm-icon {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: #fff1f3;
+    color: #d64e65;
+}
+
+.qr-confirm-delete {
+    color: #fff;
+    background: #d64e65;
+    border-color: #d64e65;
+}
+
+.qr-confirm-delete:hover {
+    background: #c43f56;
+}
+
+@media(max-width:760px) {
+    .qr-generator-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .qr-history-panel {
+        grid-column: auto;
+    }
+
+    .qr-history-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .qr-row-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .qr-history-heading {
+        align-items: flex-start;
+    }
+
+    .qr-image-wrap img {
+        width: 190px;
+        height: 190px;
+    }
+}
